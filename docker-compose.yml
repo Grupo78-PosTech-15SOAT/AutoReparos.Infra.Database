@@ -1,0 +1,48 @@
+# Docker Compose - AutoReparos.Infra.Database (Local Database Environment)
+services:
+  postgres:
+    image: postgres:16
+    container_name: autoreparos-db-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-autoreparos}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-Admin@123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d autoreparos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - autoreparos-db-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: autoreparos-db-pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@autoreparos.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-Admin@123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - db_pgadmin_data:/var/lib/pgadmin
+    networks:
+      - autoreparos-db-network
+
+volumes:
+  db_pg_data:
+  db_pgadmin_data:
+
+networks:
+  autoreparos-db-network:
+    driver: bridge

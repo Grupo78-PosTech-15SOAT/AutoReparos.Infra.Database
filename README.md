@@ -138,15 +138,32 @@ Após o `terraform apply`, os seguintes valores são disponibilizados para consu
 
 ---
 
-## 7. Integração e CI/CD
+## 7. Desenvolvimento e Testes Locais com Docker Compose
 
-O repositório possui uma esteira automatizada no GitHub Actions (`.github/workflows/ci.yml`) que valida o código Terraform a cada `push` ou `pull_request` na branch `main`:
+Para testes locais de migrações e validação de consultas sem necessidade de provisionamento na nuvem AWS, este repositório disponibiliza um `docker-compose.yml` com **PostgreSQL 16** e **pgAdmin 4**:
+
+```bash
+# Iniciar o PostgreSQL 16 e pgAdmin 4 localmente
+docker-compose up -d
+
+# Acessar o pgAdmin: http://localhost:5050 (admin@autoreparos.com / Admin@123)
+# Conexão direta PostgreSQL: localhost:5432 (admin / Admin@123)
+
+# Parar o ambiente
+docker-compose down
+```
+
+---
+
+## 8. Integração e CI/CD
+
+O repositório possui uma esteira automatizada no GitHub Actions (`.github/workflows/ci.yml`) com controle de concorrência e actions com commit SHA fixados:
 - `terraform fmt -check`: Garante a formatação padrão da HashiCorp.
 - `terraform validate`: Valida a sintaxe e a consistência estática dos recursos HCL.
 
 ---
 
-## 8. Avaliação FIAP (SOAT)
+## 9. Avaliação FIAP (SOAT)
 
 - **Repositório da Banca:** O usuário `soat-architecture` possui acesso como colaborador neste repositório.
 - **Isolamento Multi-Repo:** Este repositório opera de maneira totalmente desacoplada dos repositórios de aplicação (`AutoReparos.App`), serverless (`AutoReparos.AuthLambda`) e Kubernetes (`AutoReparos.Infra.K8s`).
