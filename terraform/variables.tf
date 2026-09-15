@@ -76,9 +76,9 @@ variable "multi_az" {
 }
 
 variable "backup_retention_period" {
-  description = "Dias de retenção de backups automatizados do RDS"
+  description = "Dias de retenção de backups automatizados do RDS (1 dia para compatibilidade com Free Tier)"
   type        = number
-  default     = 7
+  default     = 1
 }
 
 variable "deletion_protection" {
