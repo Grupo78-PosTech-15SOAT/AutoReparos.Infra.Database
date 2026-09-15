@@ -57,7 +57,7 @@ AutoReparos.Infra.Database/
 │   └── workflows/
 │       └── ci.yml               # Pipeline de CI (terraform fmt, init, validate)
 ├── terraform/
-│   ├── main.tf                  # Recursos RDS, Subnet Group, Security Group, Secrets Manager
+│   ├── main.tf                  # Recursos RDS, Subnet Group, Security Group, Secrets Manager e SSM Parameter Store
 │   ├── variables.tf             # Definição e tipagem de variáveis de entrada
 │   ├── outputs.tf               # Outputs exportados (Endpoints, ARNs, Connection Strings)
 │   ├── providers.tf             # Provedor AWS e Random, configuração de backend S3
@@ -77,28 +77,35 @@ AutoReparos.Infra.Database/
 | `vpc_id` | `string` | *Obrigatório* | ID da VPC para associação do Security Group |
 | `private_subnet_ids` | `list(string)` | *Obrigatório* | Subnets privadas em AZs diferentes para o Subnet Group |
 | `allowed_security_group_ids` | `list(string)` | `[]` | SGs do EKS e da Lambda autorizados no PostgreSQL |
-| `db_name` | `string` | `"autoreparos"` | Nome inicial do banco de dados relacional |
+| `db_name` | `string` | `"autoreparos_db"` | Nome inicial do banco de dados relacional |
 | `db_username` | `string` | `"autoreparos_admin"` | Usuário master do PostgreSQL |
 | `db_password` | `string` | `""` | Senha master (vazio gera senha forte via Secrets Manager) |
 | `instance_class` | `string` | `"db.t4g.micro"` | Tipo da instância RDS (Graviton / Burstable) |
 | `allocated_storage` | `number` | `20` | Tamanho inicial do disco em GiB (GP3) |
-| `max_allocated_storage` | `number` | `100` | Limite de autoscaling de armazenamento em GiB |
+| `max_allocated_storage` | `number` | `20` | Limite de autoscaling em GiB (mantém perfil Free Tier) |
 | `multi_az` | `bool` | `false` | Alta disponibilidade Multi-AZ |
 | `backup_retention_period` | `number` | `7` | Dias de retenção de snapshots automatizados |
 
 ---
 
-## 5. Outputs Exportados
+## 5. Outputs Exportados e Parâmetros SSM
 
 Após o `terraform apply`, os seguintes valores são disponibilizados para consumo das outras camadas de infraestrutura e aplicações:
 
+### Outputs do Terraform:
 - `db_endpoint`: Endpoint de rede no formato `host:porta`.
 - `db_address`: Host DNS do PostgreSQL.
 - `db_port`: Porta TCP (padrão `5432`).
-- `db_name`: Nome da base de dados criada.
+- `db_name`: Nome da base de dados criada (`autoreparos_db`).
 - `db_security_group_id`: ID do Security Group gerenciado do RDS.
 - `db_secret_arn`: ARN do segredo gerado no AWS Secrets Manager.
 - `db_connection_string`: String de conexão compatível com Npgsql e EF Core (.NET).
+
+### Parâmetros no AWS SSM Parameter Store:
+- `/autoreparos/{environment}/database/endpoint`: Host e porta para conexão.
+- `/autoreparos/{environment}/database/address`: Host DNS puro.
+- `/autoreparos/{environment}/database/name`: Nome da base de dados.
+- `/autoreparos/{environment}/database/secret_arn`: ARN do segredo no Secrets Manager.
 
 ---
 
@@ -159,11 +166,14 @@ docker-compose down
 
 O repositório possui uma esteira automatizada no GitHub Actions (`.github/workflows/ci.yml`) com controle de concorrência e actions com commit SHA fixados:
 - `terraform fmt -check`: Garante a formatação padrão da HashiCorp.
+- `terraform init -backend=false`: Inicializa provedores de forma isolada.
 - `terraform validate`: Valida a sintaxe e a consistência estática dos recursos HCL.
+- `terraform plan`: Executado em Pull Requests condicionalmente à presença de credenciais AWS nos Secrets.
+- `terraform apply`: Executado automaticamente após merge na branch `main` condicionalmente à presença de credenciais AWS nos Secrets.
 
 ---
 
-## 9. Avaliação FIAP (SOAT)
+## 9. Governança e Arquitetura Multi-Repo
 
-- **Repositório da Banca:** O usuário `soat-architecture` possui acesso como colaborador neste repositório.
-- **Isolamento Multi-Repo:** Este repositório opera de maneira totalmente desacoplada dos repositórios de aplicação (`AutoReparos.App`), serverless (`AutoReparos.AuthLambda`) e Kubernetes (`AutoReparos.Infra.K8s`).
+- **Isolamento Multi-Repo:** Este repositório opera de maneira totalmente desacoplada dos repositórios de aplicação (`AutoReparos.App`), serverless (`AutoReparos.AuthLambda`) e Kubernetes (`AutoReparos.Infra.K8s`), comunicando-se através do AWS SSM Parameter Store e AWS Secrets Manager.
+- **Proteção de Branch:** A branch `main` é protegida exigindo Pull Request com aprovação e validação verde de CI/CD antes do merge.

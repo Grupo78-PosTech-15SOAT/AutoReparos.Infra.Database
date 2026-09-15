@@ -150,3 +150,53 @@ resource "aws_secretsmanager_secret_version" "db_credentials_version" {
     connectionString = "Host=${aws_db_instance.postgres.address};Port=${aws_db_instance.postgres.port};Database=${var.db_name};Username=${var.db_username};Password=${local.effective_password};SSL Mode=Prefer;"
   })
 }
+
+# 7. AWS SSM Parameter Store para Desacoplamento Multi-Repo
+resource "aws_ssm_parameter" "db_endpoint" {
+  name        = "/autoreparos/${var.environment}/database/endpoint"
+  description = "Endpoint completo do AWS RDS PostgreSQL (host:porta)"
+  type        = "String"
+  value       = aws_db_instance.postgres.endpoint
+  overwrite   = true
+
+  tags = {
+    Environment = var.environment
+  }
+}
+
+resource "aws_ssm_parameter" "db_address" {
+  name        = "/autoreparos/${var.environment}/database/address"
+  description = "Endereco DNS puro do AWS RDS PostgreSQL"
+  type        = "String"
+  value       = aws_db_instance.postgres.address
+  overwrite   = true
+
+  tags = {
+    Environment = var.environment
+  }
+}
+
+resource "aws_ssm_parameter" "db_name" {
+  name        = "/autoreparos/${var.environment}/database/name"
+  description = "Nome do banco de dados relacional principal"
+  type        = "String"
+  value       = var.db_name
+  overwrite   = true
+
+  tags = {
+    Environment = var.environment
+  }
+}
+
+resource "aws_ssm_parameter" "db_secret_arn" {
+  name        = "/autoreparos/${var.environment}/database/secret_arn"
+  description = "ARN do segredo no Secrets Manager contendo as credenciais do banco"
+  type        = "String"
+  value       = aws_secretsmanager_secret.db_credentials.arn
+  overwrite   = true
+
+  tags = {
+    Environment = var.environment
+  }
+}
+

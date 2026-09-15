@@ -35,7 +35,7 @@ variable "allowed_cidr_blocks" {
 variable "db_name" {
   description = "Nome do banco de dados relacional inicial"
   type        = string
-  default     = "autoreparos"
+  default     = "autoreparos_db"
 }
 
 variable "db_username" {
@@ -64,9 +64,9 @@ variable "allocated_storage" {
 }
 
 variable "max_allocated_storage" {
-  description = "Limite máximo para auto-scaling de armazenamento em GiB"
+  description = "Limite máximo para auto-scaling de armazenamento em GiB (20 GiB mantem perfil Free Tier)"
   type        = number
-  default     = 100
+  default     = 20
 }
 
 variable "multi_az" {
@@ -76,9 +76,9 @@ variable "multi_az" {
 }
 
 variable "backup_retention_period" {
-  description = "Dias de retenção de backups automatizados do RDS"
+  description = "Dias de retenção de backups automatizados do RDS (1 dia para compatibilidade com Free Tier)"
   type        = number
-  default     = 7
+  default     = 1
 }
 
 variable "deletion_protection" {
