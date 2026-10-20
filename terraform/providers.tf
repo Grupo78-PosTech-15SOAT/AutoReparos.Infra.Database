@@ -12,13 +12,14 @@ terraform {
     }
   }
 
-  # Configuração de Backend remoto S3 (opcional/descomentar em produção)
-  # backend "s3" {
-  #   bucket         = "autoreparos-terraform-state"
-  #   key            = "database/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   dynamodb_table = "autoreparos-tflocks"
-  # }
+  # Backend S3 com State Locking via DynamoDB
+  backend "s3" {
+    bucket         = "autoreparos-terraform-state-backend"
+    key            = "database/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "autoreparos-terraform-locks"
+    encrypt        = true
+  }
 }
 
 provider "aws" {
