@@ -121,7 +121,7 @@ resource "aws_db_parameter_group" "pg16" {
 resource "aws_db_instance" "postgres" {
   identifier            = "autoreparos-rds-${var.environment}"
   engine                = "postgres"
-  engine_version        = "16.3"
+  engine_version        = "16.15"
   instance_class        = var.db_instance_class
   allocated_storage     = var.db_allocated_storage
   max_allocated_storage = var.db_max_allocated_storage
@@ -145,6 +145,7 @@ resource "aws_db_instance" "postgres" {
   copy_tags_to_snapshot      = true
   deletion_protection        = var.deletion_protection
   skip_final_snapshot        = var.skip_final_snapshot
+  final_snapshot_identifier  = var.final_snapshot_identifier
   auto_minor_version_upgrade = true
 
   tags = {
@@ -156,7 +157,7 @@ resource "aws_db_instance" "postgres" {
 resource "aws_secretsmanager_secret" "db_credentials" {
   name                    = "autoreparos/${var.environment}/database/credentials"
   description             = "Credenciais de acesso ao AWS RDS PostgreSQL 16 para AutoReparos.App e AutoReparos.AuthLambda"
-  recovery_window_in_days = 0
+  recovery_window_in_days = 7
 
   tags = {
     Name = "autoreparos-db-credentials-${var.environment}"

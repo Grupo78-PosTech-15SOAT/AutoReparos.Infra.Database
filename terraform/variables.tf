@@ -11,27 +11,40 @@ variable "environment" {
 }
 
 variable "vpc_id" {
-  description = "ID da VPC onde o RDS será provisionado. Se vazio, será auto-descoberta via tag Name"
+  description = "VPC ID exported by the network Terraform state"
   type        = string
-  default     = ""
+  validation {
+    condition     = startswith(var.vpc_id, "vpc-")
+    error_message = "vpc_id must be passed from the network state."
+  }
 }
 
 variable "private_subnet_ids" {
-  description = "Lista de IDs das Subnets privadas para o DB Subnet Group. Se vazia, será auto-descoberta via tags na VPC"
+  description = "Private subnet IDs exported by the network Terraform state"
   type        = list(string)
-  default     = []
+  validation {
+    condition     = length(var.private_subnet_ids) >= 2
+    error_message = "At least two private subnet IDs must be passed explicitly."
+  }
 }
 
 variable "allowed_security_group_ids" {
-  description = "Lista de IDs de Security Groups autorizados a acessar o PostgreSQL na porta 5432 (ex: Security Group do EKS e da Lambda)"
+  description = "Only the EKS node and shared Lambda security groups may connect to PostgreSQL"
   type        = list(string)
-  default     = []
+  validation {
+    condition     = length(var.allowed_security_group_ids) >= 2 && alltrue([for id in var.allowed_security_group_ids : startswith(id, "sg-")])
+    error_message = "Pass the EKS and Lambda security group IDs from the network layer."
+  }
 }
 
 variable "allowed_cidr_blocks" {
   description = "Blocos CIDR adicionais autorizados para acesso ao PostgreSQL (ex: VPN corporativa ou subnets internas)"
   type        = list(string)
   default     = []
+  validation {
+    condition     = length(var.allowed_cidr_blocks) == 0
+    error_message = "Use security group IDs for database access; CIDR based ingress is disabled."
+  }
 }
 
 variable "db_name" {
@@ -105,4 +118,10 @@ variable "skip_final_snapshot" {
   description = "Determina se um snapshot final deve ser ignorado na destruição (false garante snapshot de resgate)"
   type        = bool
   default     = false
+}
+
+variable "final_snapshot_identifier" {
+  description = "Unique final snapshot name used by the centrally approved teardown workflow"
+  type        = string
+  default     = "autoreparos-rds-production-final"
 }

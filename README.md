@@ -13,7 +13,7 @@
 Este repositório contém a definição de **Infraestrutura como Código (IaC)** responsável por provisionar, configurar e gerenciar o ciclo de vida do **Banco de Dados Relacional Gerenciado** da plataforma AutoReparos na nuvem AWS.
 
 Em estrita conformidade com as exigências da Fase 3 do Tech Challenge FIAP SOAT:
-1. **Banco Gerenciado:** Utiliza o serviço **AWS RDS PostgreSQL versão 16.3**.
+1. **Banco Gerenciado:** Utiliza o serviço **AWS RDS PostgreSQL 16**, com uma versão minor disponível definida em `terraform/main.tf`.
 2. **Isolamento em Subnets Privadas:** O cluster de banco de dados reside exclusivamente dentro de um `aws_db_subnet_group` vinculado a subnets privadas sem IP público (`publicly_accessible = false`).
 3. **Segurança de Rede Restrita:** O Security Group do RDS libera conexões TCP na porta `5432` estritamente a partir dos Security Groups autorizados da aplicação:
    - Security Group do Cluster Kubernetes AWS EKS (Pods da API).
@@ -99,7 +99,7 @@ Após o `terraform apply`, os seguintes valores são disponibilizados para consu
 - `db_name`: Nome da base de dados criada (`autoreparos_db`).
 - `db_security_group_id`: ID do Security Group gerenciado do RDS.
 - `db_secret_arn`: ARN do segredo gerado no AWS Secrets Manager.
-- `db_connection_string`: String de conexão compatível com Npgsql e EF Core (.NET).
+- A aplicação deve consultar o segredo `db_secret_arn` diretamente no Secrets Manager. Credenciais de banco não são outputs do Terraform.
 
 ### Parâmetros no AWS SSM Parameter Store:
 - `/autoreparos/{environment}/database/endpoint`: Host e porta para conexão.
@@ -168,8 +168,9 @@ O repositório possui uma esteira automatizada no GitHub Actions (`.github/workf
 - `terraform fmt -check`: Garante a formatação padrão da HashiCorp.
 - `terraform init -backend=false`: Inicializa provedores de forma isolada.
 - `terraform validate`: Valida a sintaxe e a consistência estática dos recursos HCL.
-- `terraform plan`: Executado em Pull Requests condicionalmente à presença de credenciais AWS nos Secrets.
-- `terraform apply`: Executado automaticamente após merge na branch `main` condicionalmente à presença de credenciais AWS nos Secrets.
+- `terraform validate`: Validação sem credenciais AWS.
+- `apply`/`destroy`: Não executados por este repositório. O pai `AutoReparos` é o único workflow de infraestrutura AWS.
+- State remoto desta camada: `database/terraform.tfstate`; `vpc_id`, subnets e SGs de origem são passados pelo state de rede. Somente SGs EKS e Lambda podem acessar PostgreSQL.
 
 ---
 
