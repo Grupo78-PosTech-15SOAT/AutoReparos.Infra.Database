@@ -157,7 +157,7 @@ resource "aws_db_instance" "postgres" {
 resource "aws_secretsmanager_secret" "db_credentials" {
   name                    = "autoreparos/${var.environment}/database/credentials"
   description             = "Credenciais de acesso ao AWS RDS PostgreSQL 16 para AutoReparos.App e AutoReparos.AuthLambda"
-  recovery_window_in_days = 7
+  recovery_window_in_days = 0
 
   tags = {
     Name = "autoreparos-db-credentials-${var.environment}"
