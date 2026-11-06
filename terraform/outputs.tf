@@ -18,12 +18,6 @@ output "db_name" {
   value       = aws_db_instance.postgres.db_name
 }
 
-output "db_username" {
-  description = "Nome de usuario administrador do PostgreSQL"
-  value       = aws_db_instance.postgres.username
-  sensitive   = true
-}
-
 output "db_security_group_id" {
   description = "ID do Security Group restrito criado para o RDS"
   value       = aws_security_group.rds.id
@@ -37,10 +31,4 @@ output "db_instance_id" {
 output "db_secret_arn" {
   description = "ARN do segredo no AWS Secrets Manager contendo as credenciais do banco"
   value       = aws_secretsmanager_secret.db_credentials.arn
-}
-
-output "db_connection_string" {
-  description = "Connection string para aplicacao .NET e Lambda"
-  value       = "Host=${aws_db_instance.postgres.address};Port=${aws_db_instance.postgres.port};Database=${var.db_name};Username=${var.db_username};Password=${local.effective_password};SSL Mode=Prefer;"
-  sensitive   = true
 }
