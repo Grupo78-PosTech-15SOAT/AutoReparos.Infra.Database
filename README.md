@@ -84,7 +84,7 @@ AutoReparos.Infra.Database/
 | `allocated_storage` | `number` | `20` | Tamanho inicial do disco em GiB (GP3) |
 | `max_allocated_storage` | `number` | `20` | Limite de autoscaling em GiB (mantém perfil Free Tier) |
 | `multi_az` | `bool` | `false` | Alta disponibilidade Multi-AZ |
-| `backup_retention_period` | `number` | `7` | Dias de retenção de snapshots automatizados |
+| `backup_retention_period` | `number` | `1` | Dia de retenção dos backups automatizados; padrão compatível com o AWS Free Plan desta conta. Reavaliar fora do plano gratuito. |
 
 ---
 

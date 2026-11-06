@@ -85,9 +85,9 @@ variable "db_instance_class" {
 }
 
 variable "backup_retention_period" {
-  description = "Dias de retenção dos backups automatizados diários (mínimo 7 dias recomendado para produção)"
+  description = "Dias de retenção dos backups automatizados diários (1 dia no AWS Free Plan; reavaliar para produção fora desse plano)"
   type        = number
-  default     = 7
+  default     = 1
 }
 
 variable "backup_window" {
