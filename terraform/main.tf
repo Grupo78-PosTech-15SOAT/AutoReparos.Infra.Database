@@ -5,7 +5,32 @@ resource "random_password" "master_password" {
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
+# Auto-descoberta da VPC caso não informada explicitamente via variável
+data "aws_vpc" "selected" {
+  count = var.vpc_id == "" ? 1 : 0
+  tags = {
+    Name = "${var.environment}-vpc"
+  }
+}
+
 locals {
+  vpc_id = var.vpc_id != "" ? var.vpc_id : (length(data.aws_vpc.selected) > 0 ? data.aws_vpc.selected[0].id : "")
+}
+
+# Auto-descoberta das subnets privadas da VPC caso não informadas explicitamente
+data "aws_subnets" "private" {
+  count = length(var.private_subnet_ids) == 0 && local.vpc_id != "" ? 1 : 0
+  filter {
+    name   = "vpc-id"
+    values = [local.vpc_id]
+  }
+  tags = {
+    "kubernetes.io/role/internal-elb" = "1"
+  }
+}
+
+locals {
+  private_subnet_ids = length(var.private_subnet_ids) > 0 ? var.private_subnet_ids : (length(data.aws_subnets.private) > 0 ? data.aws_subnets.private[0].ids : [])
   effective_password = var.db_password != "" ? var.db_password : random_password.master_password.result
 }
 
@@ -13,7 +38,7 @@ locals {
 resource "aws_db_subnet_group" "rds" {
   name        = "autoreparos-db-subnet-group-${var.environment}"
   description = "Subnet Group dedicado para o PostgreSQL RDS do AutoReparos em subnets privadas"
-  subnet_ids  = var.private_subnet_ids
+  subnet_ids  = local.private_subnet_ids
 
   tags = {
     Name = "autoreparos-db-subnet-group-${var.environment}"
@@ -24,7 +49,7 @@ resource "aws_db_subnet_group" "rds" {
 resource "aws_security_group" "rds" {
   name        = "autoreparos-rds-sg-${var.environment}"
   description = "Security group restrito para o banco de dados RDS PostgreSQL"
-  vpc_id      = var.vpc_id
+  vpc_id      = local.vpc_id
 
   dynamic "ingress" {
     for_each = length(var.allowed_security_group_ids) > 0 ? [1] : []
@@ -96,10 +121,10 @@ resource "aws_db_parameter_group" "pg16" {
 resource "aws_db_instance" "postgres" {
   identifier            = "autoreparos-rds-${var.environment}"
   engine                = "postgres"
-  engine_version        = "16.3"
-  instance_class        = var.instance_class
-  allocated_storage     = var.allocated_storage
-  max_allocated_storage = var.max_allocated_storage
+  engine_version        = "16.15"
+  instance_class        = var.db_instance_class
+  allocated_storage     = var.db_allocated_storage
+  max_allocated_storage = var.db_max_allocated_storage
   storage_type          = "gp3"
   storage_encrypted     = true
 
@@ -120,6 +145,7 @@ resource "aws_db_instance" "postgres" {
   copy_tags_to_snapshot      = true
   deletion_protection        = var.deletion_protection
   skip_final_snapshot        = var.skip_final_snapshot
+  final_snapshot_identifier  = var.final_snapshot_identifier
   auto_minor_version_upgrade = true
 
   tags = {
@@ -199,4 +225,3 @@ resource "aws_ssm_parameter" "db_secret_arn" {
     Environment = var.environment
   }
 }
-
