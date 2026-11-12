@@ -16,8 +16,8 @@ Em estrita conformidade com as exigências da Fase 3 do Tech Challenge FIAP SOAT
 1. **Banco Gerenciado:** Utiliza o serviço **AWS RDS PostgreSQL 16**, com uma versão minor disponível definida em `terraform/main.tf`.
 2. **Isolamento em Subnets Privadas:** O cluster de banco de dados reside exclusivamente dentro de um `aws_db_subnet_group` vinculado a subnets privadas sem IP público (`publicly_accessible = false`).
 3. **Segurança de Rede Restrita:** O Security Group do RDS libera conexões TCP na porta `5432` estritamente a partir dos Security Groups autorizados da aplicação:
-   - Security Group do Cluster Kubernetes AWS EKS (Pods da API).
-   - Security Group da AWS Lambda Serverless de autenticação (`AutoReparos.AuthLambda`).
+   - Security Group do Cluster Kubernetes AWS EKS (Pods do Cadastros).
+   - A AWS Lambda de autenticação (`AutoReparos.AuthLambda`) **não** acessa o banco: autentica o cliente pelo endpoint interno do Cadastros.
 4. **Parameter Group Otimizado:** Configuração de auditoria e logging (`log_connections`, `log_disconnections`, `log_min_duration_statement`).
 5. **Segurança e Criptografia:** Armazenamento em disco criptografado em repouso (`storage_encrypted = true`) com KMS e geração e persistência de credenciais automáticas no **AWS Secrets Manager**.
 
@@ -35,14 +35,11 @@ flowchart TD
             end
 
             subgraph EKSSG["Origens Autorizadas (Security Groups)"]
-                EKS["AWS EKS Pods<br/>(AutoReparos.App - API)"]
-                Lambda["AWS Lambda<br/>(AutoReparos.AuthLambda)"]
+                EKS["AWS EKS Pods<br/>(AutoReparos.Cadastros - API)"]
             end
 
             EKS -->|TCP 5432| RDS
-            Lambda -->|TCP 5432| RDS
             EKS -.->|Leitura de Segredo| SM
-            Lambda -.->|Leitura de Segredo| SM
         end
     end
 ```
@@ -76,7 +73,7 @@ AutoReparos.Infra.Database/
 | `environment` | `string` | `"production"` | Ambiente de execução |
 | `vpc_id` | `string` | *Obrigatório* | ID da VPC para associação do Security Group |
 | `private_subnet_ids` | `list(string)` | *Obrigatório* | Subnets privadas em AZs diferentes para o Subnet Group |
-| `allowed_security_group_ids` | `list(string)` | `[]` | SGs do EKS e da Lambda autorizados no PostgreSQL |
+| `allowed_security_group_ids` | `list(string)` | `[]` | SG do EKS autorizado no PostgreSQL |
 | `db_name` | `string` | `"autoreparos_db"` | Nome inicial do banco de dados relacional |
 | `db_username` | `string` | `"autoreparos_admin"` | Usuário master do PostgreSQL |
 | `db_password` | `string` | `""` | Senha master (vazio gera senha forte via Secrets Manager) |
@@ -170,7 +167,7 @@ O repositório possui uma esteira automatizada no GitHub Actions (`.github/workf
 - `terraform validate`: Valida a sintaxe e a consistência estática dos recursos HCL.
 - `terraform validate`: Validação sem credenciais AWS.
 - `apply`/`destroy`: Não executados por este repositório. O pai `AutoReparos` é o único workflow de infraestrutura AWS.
-- State remoto desta camada: `database/terraform.tfstate`; `vpc_id`, subnets e SGs de origem são passados pelo state de rede. Somente SGs EKS e Lambda podem acessar PostgreSQL.
+- State remoto desta camada: `database/terraform.tfstate`; `vpc_id`, subnets e SGs de origem são passados pelo state de rede. Somente o SG do EKS pode acessar o PostgreSQL.
 
 ---
 

@@ -29,11 +29,11 @@ variable "private_subnet_ids" {
 }
 
 variable "allowed_security_group_ids" {
-  description = "Only the EKS node and shared Lambda security groups may connect to PostgreSQL"
+  description = "Only the EKS node security group may connect to PostgreSQL (the auth Lambda no longer reads the database; it calls the Cadastros internal endpoint)"
   type        = list(string)
   validation {
-    condition     = length(var.allowed_security_group_ids) >= 2 && alltrue([for id in var.allowed_security_group_ids : startswith(id, "sg-")])
-    error_message = "Pass the EKS and Lambda security group IDs from the network layer."
+    condition     = length(var.allowed_security_group_ids) >= 1 && alltrue([for id in var.allowed_security_group_ids : startswith(id, "sg-")])
+    error_message = "Pass the EKS security group ID from the network layer."
   }
 }
 
