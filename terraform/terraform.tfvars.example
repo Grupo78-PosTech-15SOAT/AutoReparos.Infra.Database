@@ -7,10 +7,9 @@ private_subnet_ids = [
   "subnet-0123456789abcdef2"
 ]
 
-# IDs dos Security Groups autorizados (EKS Node/Cluster SG e Lambda SG)
+# IDs dos Security Groups autorizados (EKS Node/Cluster SG). A Lambda de autenticação não acessa o banco.
 allowed_security_group_ids = [
-  "sg-0123456789abcdef0",
-  "sg-0abcdef1234567890"
+  "sg-0123456789abcdef0"
 ]
 
 allowed_cidr_blocks = []

@@ -54,7 +54,7 @@ resource "aws_security_group" "rds" {
   dynamic "ingress" {
     for_each = length(var.allowed_security_group_ids) > 0 ? [1] : []
     content {
-      description     = "Acesso PostgreSQL a partir dos Security Groups autorizados (EKS e Lambda)"
+      description     = "Acesso PostgreSQL a partir do Security Group autorizado (EKS)"
       from_port       = 5432
       to_port         = 5432
       protocol        = "tcp"
@@ -156,7 +156,7 @@ resource "aws_db_instance" "postgres" {
 # 6. AWS Secrets Manager para Armazenamento Seguro de Credenciais
 resource "aws_secretsmanager_secret" "db_credentials" {
   name                    = "autoreparos/${var.environment}/database/credentials"
-  description             = "Credenciais de acesso ao AWS RDS PostgreSQL 16 para AutoReparos.App e AutoReparos.AuthLambda"
+  description             = "Credenciais de acesso ao AWS RDS PostgreSQL 16 para o AutoReparos.Cadastros"
   recovery_window_in_days = 0
 
   tags = {
