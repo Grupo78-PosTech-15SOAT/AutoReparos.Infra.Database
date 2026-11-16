@@ -29,11 +29,11 @@ variable "private_subnet_ids" {
 }
 
 variable "allowed_security_group_ids" {
-  description = "Only the EKS node and shared Lambda security groups may connect to PostgreSQL"
+  description = "Only the EKS node security group may connect to PostgreSQL (the auth Lambda no longer reads the database; it calls the Cadastros internal endpoint)"
   type        = list(string)
   validation {
-    condition     = length(var.allowed_security_group_ids) >= 2 && alltrue([for id in var.allowed_security_group_ids : startswith(id, "sg-")])
-    error_message = "Pass the EKS and Lambda security group IDs from the network layer."
+    condition     = length(var.allowed_security_group_ids) >= 1 && alltrue([for id in var.allowed_security_group_ids : startswith(id, "sg-")])
+    error_message = "Pass the EKS security group ID from the network layer."
   }
 }
 
@@ -124,4 +124,14 @@ variable "final_snapshot_identifier" {
   description = "Unique final snapshot name used by the centrally approved teardown workflow"
   type        = string
   default     = "autoreparos-rds-production-final"
+}
+
+variable "conta_aws_id" {
+  description = "Conta AWS da plataforma (D-50); compõe os ARNs das roles de deploy autorizadas"
+  type        = string
+  default     = "198903849859"
+  validation {
+    condition     = can(regex("^[0-9]{12}$", var.conta_aws_id))
+    error_message = "conta_aws_id deve ter 12 digitos."
+  }
 }

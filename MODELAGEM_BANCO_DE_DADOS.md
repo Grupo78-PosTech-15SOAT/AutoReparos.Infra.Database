@@ -164,7 +164,7 @@ erDiagram
 
 | Tabela | Nome do Índice | Tipo | Colunas Indexadas | Justificativa Técnica |
 | :--- | :--- | :--- | :--- | :--- |
-| `Clientes` | `IX_Clientes_Documento` | B-Tree (Único) | `Documento` | Busca instantânea (< 5ms) por CPF na Lambda Serverless de autenticação. |
+| `Clientes` | `IX_Clientes_Documento` | B-Tree (Único) | `Documento` | Busca instantânea (< 5ms) por CPF no endpoint interno de autenticação do Cadastros (chamado pela Lambda). |
 | `Clientes` | `IX_Clientes_Email` | B-Tree (Único) | `Email` | Validação de unicidade e recuperação de credenciais. |
 | `Veiculos` | `IX_Veiculos_Placa` | B-Tree (Único) | `Placa` | Busca de veículo por placa na recepção da oficina e no portal público. |
 | `Veiculos` | `IX_Veiculos_ClienteId` | B-Tree | `ClienteId` | Otimização do join para listagem de veículos do cliente logado. |
