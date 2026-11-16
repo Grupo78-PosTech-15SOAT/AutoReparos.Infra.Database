@@ -32,3 +32,8 @@ override.tf.json
 .terraformrc
 terraform.rc
 .DS_Store
+
+# Pacote do provisionador e caches Python
+lambda/provisionador/build/
+terraform/.build/
+__pycache__/
