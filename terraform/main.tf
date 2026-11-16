@@ -62,6 +62,14 @@ resource "aws_security_group" "rds" {
     }
   }
 
+  ingress {
+    description     = "Acesso PostgreSQL a partir da Lambda autoreparos-provisionador-db (D-54)"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.provisionador.id]
+  }
+
   dynamic "ingress" {
     for_each = length(var.allowed_cidr_blocks) > 0 ? [1] : []
     content {

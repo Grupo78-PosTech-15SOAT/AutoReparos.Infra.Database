@@ -125,3 +125,13 @@ variable "final_snapshot_identifier" {
   type        = string
   default     = "autoreparos-rds-production-final"
 }
+
+variable "conta_aws_id" {
+  description = "Conta AWS da plataforma (D-50); compõe os ARNs das roles de deploy autorizadas"
+  type        = string
+  default     = "198903849859"
+  validation {
+    condition     = can(regex("^[0-9]{12}$", var.conta_aws_id))
+    error_message = "conta_aws_id deve ter 12 digitos."
+  }
+}

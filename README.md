@@ -18,6 +18,7 @@ Em estrita conformidade com as exigências da Fase 3 do Tech Challenge FIAP SOAT
 3. **Segurança de Rede Restrita:** O Security Group do RDS libera conexões TCP na porta `5432` estritamente a partir dos Security Groups autorizados da aplicação:
    - Security Group do Cluster Kubernetes AWS EKS (Pods do Cadastros).
    - A AWS Lambda de autenticação (`AutoReparos.AuthLambda`) **não** acessa o banco: autentica o cliente pelo endpoint interno do Cadastros.
+   - A Lambda `autoreparos-provisionador-db` (security group próprio), que cria a database e o usuário de cada serviço (seção 10).
 4. **Parameter Group Otimizado:** Configuração de auditoria e logging (`log_connections`, `log_disconnections`, `log_min_duration_statement`).
 5. **Segurança e Criptografia:** Armazenamento em disco criptografado em repouso (`storage_encrypted = true`) com KMS e geração e persistência de credenciais automáticas no **AWS Secrets Manager**.
 
@@ -53,8 +54,11 @@ AutoReparos.Infra.Database/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml               # Pipeline de CI (terraform fmt, init, validate)
+├── lambda/provisionador/      # Código Python 3.12 do provisionador, testes e empacotar.sh
 ├── terraform/
 │   ├── main.tf                  # Recursos RDS, Subnet Group, Security Group, Secrets Manager e SSM Parameter Store
+│   ├── provisionador.tf         # Lambda autoreparos-provisionador-db, Function URL AWS_IAM, SG e role (D-54)
+│   ├── tests/                   # terraform test com mock_provider (provisionador.tftest.hcl)
 │   ├── variables.tf             # Definição e tipagem de variáveis de entrada
 │   ├── outputs.tf               # Outputs exportados (Endpoints, ARNs, Connection Strings)
 │   ├── providers.tf             # Provedor AWS e Random, configuração de backend S3
@@ -175,3 +179,36 @@ O repositório possui uma esteira automatizada no GitHub Actions (`.github/workf
 
 - **Isolamento Multi-Repo:** Este repositório opera de maneira totalmente desacoplada dos repositórios de aplicação (`AutoReparos.App`), serverless (`AutoReparos.AuthLambda`) e Kubernetes (`AutoReparos.Infra.K8s`), comunicando-se através do AWS SSM Parameter Store e AWS Secrets Manager.
 - **Proteção de Branch:** A branch `main` é protegida exigindo Pull Request com aprovação e validação verde de CI/CD antes do merge.
+
+---
+
+## 10. Provisionador da database dos serviços (D-54)
+
+A Lambda `autoreparos-provisionador-db` (`lambda/provisionador/`, Python 3.12 com `pg8000`) é a única role que lê a credencial admin do RDS. Fica nas sub-redes privadas do RDS, com security group próprio (saída 5432 para o RDS e 443 para o Secrets Manager pelo NAT), e expõe uma Function URL com `AuthType AWS_IAM`, publicada em `/autoreparos/<ambiente>/provisionador-db/url`. A política de recurso permite `lambda:InvokeFunctionUrl` e `lambda:InvokeFunction` (só via Function URL) apenas às roles `autoreparos-deploy-<servico>` (`os`, `cobranca`, `execucao`, `cadastros`), criadas pela plataforma no `AutoReparos.Infra.K8s`; elas precisam existir antes do `apply` deste stack.
+
+O job `deploy` de cada serviço faz `POST` assinado (SigV4, serviço `lambda`) na URL. A Lambda deduz o serviço de `requestContext.authorizer.iam.userArn` e, de forma idempotente, cria o usuário `<servico>_app` com a senha de `autoreparos/<ambiente>/<servico>/database` (sem trocar a senha de um usuário existente) e a database `<servico>_db` com esse dono. Para o Cadastros, a database é a `autoreparos_db` existente (D-34), que passa a ter `cadastros_app` como dono. Os nomes vêm da role, nunca do segredo: um segredo com `username`/`dbname` diferentes é recusado com `409`. Qualquer outro chamador recebe `403` sem leitura de segredo nem conexão com o banco. Resposta `200`:
+
+```json
+{"servico": "os", "database": "os_db", "usuario": "os_app", "criado": {"database": true, "usuario": true}}
+```
+
+### Empacotamento
+
+O Terraform compacta `lambda/provisionador/build/` com `archive_file`; gere o diretório antes de `terraform plan`/`apply`:
+
+```bash
+lambda/provisionador/empacotar.sh
+# equivale a:
+#   pip install --only-binary=:all: --target lambda/provisionador/build -r lambda/provisionador/requirements.txt
+#   cp lambda/provisionador/provisionador.py lambda/provisionador/build/
+```
+
+### Testes
+
+```bash
+# da raiz do pai AutoReparos
+python3 -m unittest discover -s submodules/AutoReparos.Infra.Database/lambda/provisionador/tests -p test_provisionador.py
+scripts/specs/tf_test.sh submodules/AutoReparos.Infra.Database/terraform provisionador
+```
+
+Os testes Python usam um conector Postgres e um cliente do Secrets Manager falsos; o `terraform test` usa `mock_provider`, sem AWS.

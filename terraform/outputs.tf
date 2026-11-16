@@ -32,3 +32,8 @@ output "db_secret_arn" {
   description = "ARN do segredo no AWS Secrets Manager contendo as credenciais do banco"
   value       = aws_secretsmanager_secret.db_credentials.arn
 }
+
+output "provisionador_url" {
+  description = "Function URL do autoreparos-provisionador-db (tambem em /autoreparos/<ambiente>/provisionador-db/url)"
+  value       = aws_lambda_function_url.provisionador.function_url
+}
